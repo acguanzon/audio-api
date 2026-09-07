@@ -2,7 +2,7 @@ services:
   - type: web
     name: music-player-audio-api
     runtime: docker
-    rootDir: audio-api
+
     healthCheckPath: /health
     envVars:
       - key: AUDIO_API_KEY
