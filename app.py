@@ -142,9 +142,32 @@ def create_conversion():
         if duration > MAX_DURATION_SECONDS:
             abort(400, description=f"Videos must be {MAX_DURATION_SECONDS // 60} minutes or shorter.")
 
+        # YouTube can expose a different format set for authenticated cloud
+        # requests. Select an ID from the formats returned for this exact video
+        # rather than assuming the generic bestaudio selector will exist.
+        formats = info.get("formats") or []
+        audio_only = [
+            item for item in formats
+            if item.get("acodec") not in (None, "none") and item.get("vcodec") == "none"
+        ]
+        playable = audio_only or [
+            item for item in formats if item.get("acodec") not in (None, "none")
+        ]
+        if not playable:
+            app.logger.warning(
+                "No playable audio formats for %s; available IDs: %s",
+                url,
+                [item.get("format_id") for item in formats],
+            )
+            return jsonify(error="YouTube did not provide a playable audio format."), 422
+        selected_format = max(
+            playable,
+            key=lambda item: (item.get("abr") or 0, item.get("tbr") or 0),
+        ).get("format_id")
+
         output_path = audio_filename(info.get("id"))
         options = {
-            "format": "bestaudio/best",
+            "format": selected_format,
             "outtmpl": str(output_path.with_suffix(".%(ext)s")),
             "noplaylist": True,
             "quiet": True,
