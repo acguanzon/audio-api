@@ -1,0 +1,11 @@
+# Secrets and local configuration
+.env
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Converter output
+downloads/

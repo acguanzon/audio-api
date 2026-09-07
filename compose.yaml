@@ -1,0 +1,12 @@
+services:
+  audio-api:
+    build: .
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - audio-api-data:/data
+    restart: unless-stopped
+
+volumes:
+  audio-api-data:

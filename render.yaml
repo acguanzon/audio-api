@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: music-player-audio-api
+    runtime: docker
+    rootDir: audio-api
+    healthCheckPath: /health
+    envVars:
+      - key: AUDIO_API_KEY
+        generateValue: true
+      - key: TOKEN_TTL_SECONDS
+        value: "300"
+      - key: RATE_LIMIT_PER_HOUR
+        value: "10"
+      - key: MAX_DURATION_SECONDS
+        value: "1800"
+      - key: MAX_CONCURRENT_JOBS
+        value: "1"
