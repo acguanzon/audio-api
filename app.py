@@ -148,10 +148,12 @@ def create_conversion():
         formats = info.get("formats") or []
         audio_only = [
             item for item in formats
-            if item.get("acodec") not in (None, "none") and item.get("vcodec") == "none"
+            if item.get("url") and item.get("acodec") not in (None, "none")
+            and item.get("vcodec") == "none"
         ]
         playable = audio_only or [
-            item for item in formats if item.get("acodec") not in (None, "none")
+            item for item in formats
+            if item.get("url") and item.get("acodec") not in (None, "none")
         ]
         if not playable:
             app.logger.warning(
@@ -180,8 +182,12 @@ def create_conversion():
         }
         if COOKIE_FILE.exists():
             options["cookiefile"] = str(COOKIE_FILE)
+        app.logger.info("Downloading selected YouTube format %s for %s", selected_format, info.get("id"))
         with yt_dlp.YoutubeDL(options) as ydl:
-            ydl.download([url])
+            # Reuse the authenticated extraction result. Calling download([url])
+            # triggers another YouTube extraction, which can yield a different
+            # set of formats and make the selected ID unavailable.
+            ydl.process_ie_result(info, download=True)
 
         if not output_path.exists() or output_path.stat().st_size < 32_000:
             raise RuntimeError("Conversion did not produce a valid MP3 file.")
