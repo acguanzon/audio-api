@@ -147,10 +147,16 @@ def create_conversion():
             title=info.get("title"),
             duration_seconds=duration,
         ), 201
-    except yt_dlp.utils.DownloadError:
+    except yt_dlp.utils.DownloadError as error:
         if output_path:
             output_path.unlink(missing_ok=True)
+        app.logger.warning("yt-dlp conversion failed for %s: %s", url, error)
         return jsonify(error="The video could not be downloaded or converted."), 422
+    except Exception as error:
+        if output_path:
+            output_path.unlink(missing_ok=True)
+        app.logger.exception("Unexpected conversion failure for %s", url)
+        return jsonify(error="The video could not be converted on the server."), 500
     finally:
         _jobs.release()
 
