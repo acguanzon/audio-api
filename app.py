@@ -6,6 +6,7 @@ one approved YouTube URL at a time to an expiring MP3 download.
 
 from __future__ import annotations
 
+import base64
 import os
 import secrets
 import shutil
@@ -27,6 +28,7 @@ TOKEN_TTL_SECONDS = int(os.environ.get("TOKEN_TTL_SECONDS", "300"))
 RATE_LIMIT_PER_HOUR = int(os.environ.get("RATE_LIMIT_PER_HOUR", "10"))
 MAX_DURATION_SECONDS = int(os.environ.get("MAX_DURATION_SECONDS", "1800"))
 MAX_CONCURRENT_JOBS = int(os.environ.get("MAX_CONCURRENT_JOBS", "1"))
+COOKIE_FILE = Path(os.environ.get("YTDLP_COOKIE_FILE", "/tmp/youtube-cookies.txt"))
 
 ALLOWED_HOSTS = {
     "youtube.com",
@@ -38,6 +40,26 @@ ALLOWED_HOSTS = {
 
 app = Flask(__name__)
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def configure_ytdlp_cookies() -> None:
+    """Write a Netscape cookie file supplied only through a server secret."""
+    encoded_cookies = os.environ.get("YTDLP_COOKIES_B64", "").strip()
+    if not encoded_cookies:
+        return
+    try:
+        cookie_data = base64.b64decode(encoded_cookies, validate=True)
+        if not cookie_data.startswith(b"# Netscape HTTP Cookie File"):
+            raise ValueError("not a Netscape cookie file")
+        COOKIE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        COOKIE_FILE.write_bytes(cookie_data)
+        COOKIE_FILE.chmod(0o600)
+        app.logger.info("yt-dlp cookie authentication is configured")
+    except (ValueError, OSError) as error:
+        app.logger.error("Invalid YTDLP_COOKIES_B64 secret: %s", error)
+
+
+configure_ytdlp_cookies()
 _jobs = threading.BoundedSemaphore(MAX_CONCURRENT_JOBS)
 _tokens: dict[str, tuple[Path, float]] = {}
 _token_lock = threading.Lock()
@@ -112,6 +134,8 @@ def create_conversion():
     output_path: Path | None = None
     try:
         probe_options = {"quiet": True, "no_warnings": True, "skip_download": True}
+        if COOKIE_FILE.exists():
+            probe_options["cookiefile"] = str(COOKIE_FILE)
         with yt_dlp.YoutubeDL(probe_options) as ydl:
             info = ydl.extract_info(url, download=False)
         duration = info.get("duration") or 0
@@ -131,6 +155,8 @@ def create_conversion():
                 "preferredquality": "192",
             }],
         }
+        if COOKIE_FILE.exists():
+            options["cookiefile"] = str(COOKIE_FILE)
         with yt_dlp.YoutubeDL(options) as ydl:
             ydl.download([url])
 

@@ -63,3 +63,21 @@ file is deleted after its download response finishes.
   A production mobile app should authenticate users with your backend, which
   then keeps this converter key private.
 - Update `yt-dlp` regularly because upstream extractor changes are common.
+
+## YouTube bot-check cookies
+
+Cloud-hosting IP addresses can receive YouTube's **"Sign in to confirm you're
+not a bot"** response. When that occurs, the server needs an authenticated,
+Netscape-format YouTube cookie file. Do not commit, upload, or share this file.
+Use a dedicated account and follow YouTube's terms and content permissions.
+
+For Render, encode the exported `youtube-cookies.txt` locally, then add the
+single-line output as the Render environment secret `YTDLP_COOKIES_B64`:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("youtube-cookies.txt"))
+```
+
+Redeploy the service after saving the secret. The service writes the cookie only
+to its temporary filesystem with owner-only permissions and configures `yt-dlp`
+to use it. Refresh the cookie if YouTube invalidates the session.
