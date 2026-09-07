@@ -133,7 +133,16 @@ def create_conversion():
 
     output_path: Path | None = None
     try:
-        probe_options = {"quiet": True, "no_warnings": True, "skip_download": True}
+        # Do not use yt-dlp's default bestvideo+bestaudio selector while
+        # probing. Some authenticated YouTube responses expose a limited format
+        # set and that default can fail before we inspect the formats ourselves.
+        probe_options = {
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "format": "all",
+            "ignore_no_formats_error": True,
+        }
         if COOKIE_FILE.exists():
             probe_options["cookiefile"] = str(COOKIE_FILE)
         with yt_dlp.YoutubeDL(probe_options) as ydl:
