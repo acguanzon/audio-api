@@ -17,8 +17,10 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import yt_dlp
+from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, request, send_file
 
+load_dotenv()
 APP_KEY = os.environ.get("AUDIO_API_KEY", "")
 DOWNLOAD_DIR = Path(os.environ.get("DOWNLOAD_DIR", "./downloads")).resolve()
 TOKEN_TTL_SECONDS = int(os.environ.get("TOKEN_TTL_SECONDS", "300"))
